@@ -1,0 +1,103 @@
+---
+title: "use_RISC"
+author: "SYN"
+date: "2021/7/23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+library(Matrix)
+library(irlba)
+library(umap)
+library(ggplot2)
+library(gridExtra)
+```
+
+
+```{r cars}
+library(RColorBrewer)
+library(RISC)
+
+Path = "E:/2021-spring/batch/IntegratedCode_batchCorrection/Script/GSE94820_cleared/forR"
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+#ann0 = read.table(file = paste0(Path, "/cells1.csv "), sep = "\t", header = T, stringsAsFactors = F) #好像没有overall的anno
+mat1 = read.table(file = paste0(Path, "/batch1Data_R.csv"), sep = ",", header = T,row.names = 1, stringsAsFactors = F)
+coldat1 = read.table(file = paste0(Path, "/cells1.csv"), sep = ",", header = T,row.names = 1, stringsAsFactors = F)
+rowdat1 = read.table(file = paste0(Path, "/genes.csv"), sep = ",", header = T,row.names = 1, stringsAsFactors = F)
+
+```
+
+```{r}
+process0 <- function(obj0, var0){
+  obj0 = scFilter(object = obj0, min.UMI = 10, max.UMI = Inf, min.gene = 50, min.cell = 1, is.filter = F)
+  obj0 = scNormalize(obj0, remove.mito = T)
+  obj0 = scDisperse(obj0)
+  obj0@vargene = var0
+  return(obj0)
+}
+```
+
+```{r}
+batch1 = readscdata(count = mat1, cell = coldat1, gene = rowdat1, is.filter = F)
+batch1 = process0(batch1, rownames(rowdat1))
+```
+
+```{r}
+mat2 = read.table(file = paste0(Path, "/batch2Data_R.csv"), sep = ",", header = T,row.names = 1, stringsAsFactors = F)
+coldat2 = read.table(file = paste0(Path, "/cells2.csv"), sep = ",", header = T,row.names = 1, stringsAsFactors = F)
+rowdat2 = read.table(file = paste0(Path, "/genes.csv"), sep = ",", header = T,row.names = 1, stringsAsFactors = F)
+
+#a <- colnames(mat2)
+#a <- lapply(a,substr,start=2,stop=20)
+#a <- unlist(a)
+#colnames(mat2)<-a
+
+
+batch2 = readscdata(count = mat2, cell = coldat2, gene = rowdat1, is.filter = F)
+batch2 = process0(batch2, rownames(rowdat2))
+rm(mat2)
+```
+
+
+
+
+```{r}
+
+dat.con = list(batch1, batch2)
+dat.con = scMultiIntegrate(objects = dat.con, var.gene = rownames(rowdat2), eigens = 15, add.Id = c('batch1','batch2'), method = "RPCI", align = "Optimal", do.fast = "AUTO", ncore = 1)
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+pca0 = as.matrix(dat.con@DimReduction$cell.pls)
+umap0 = umap(pca0[,1:15])$layout
+
+
+```
+
+```{r}
+write.csv(umap0,file = paste0(Path,'/umap_RISC.csv'),row.names = T)
+
+```
+
+```{r}
+head(dat.con@coldata)
+write.csv(dat.con@coldata,file = paste0(Path,'/anno_RISC.csv'),row.names = T)
+```
+
+####我是真的不想看到这坨倒胃口的恶心代码了 

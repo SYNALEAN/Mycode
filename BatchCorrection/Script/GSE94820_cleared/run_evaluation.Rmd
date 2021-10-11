@@ -1,0 +1,111 @@
+---
+title: "run_evaluation"
+author: "SYN"
+date: "2021/7/15"
+output: html_document
+---
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Evaluation based on the umap result of several methods
+
+
+Use kBET 
+```{r load data}
+library(kBET)
+data_path <- "E:/2021-spring/batch/IntegratedCode_batchCorrection/Dataset/GSE94820_cleared/"
+umi_raw <- read.csv(paste0(data_path, "Rawdata_kBET.csv"),row.names=1)  #这里叫umi 是为了区分kbet和lisi的数据，并无实际意义
+anno_raw <- read.csv(paste0(data_path, "Rawdata_anno.csv"))
+
+umi_BBKNN <- read.csv(paste0(data_path, "BBKNN_kBET.csv"),row.names=1)
+umi_ComBat <- read.csv(paste0(data_path,'ComBat_kBET.csv'),row.names = 1)
+umi_harmony <- read.csv(paste0(data_path,'Harmony_kBET.csv'),row.names = 1)
+
+##imap needs independent annotation
+umi_iMAP <- read.csv(paste0(data_path, "iMAP_kBET.csv"),row.names=1)
+anno_iMAP <- read.csv(paste0(data_path, "iMAP_anno.csv"))
+
+##RISC
+umi_RISC <- read.csv(paste0(data_path, "RISC_kBET.csv"),row.names=1)
+anno_RISC <- read.csv(paste0(data_path, "RISC_anno.csv"),row.names=1)
+
+```
+
+```{r}
+resO <- kBET(df = umi_raw, 
+    batch = anno_raw$batch,
+    plot = T)
+
+resB <- kBET(df = umi_BBKNN,
+             batch = anno_raw$batch,
+             plot = T)
+
+resC <- kBET(df = umi_ComBat,
+             batch = anno_raw$batch,
+             plot = T)
+
+resH <- kBET(df = umi_harmony,
+             batch = anno_raw$batch,
+             plot = T)
+
+resI <- kBET(df = umi_iMAP,
+             batch = anno_iMAP$batch,
+             plot = T)
+
+resR <- kBET(df = umi_RISC,
+             batch = anno_RISC$batch,
+             plot = T)
+
+```
+so strange = =,why imap have a better result than expcted ???///how expected is set?
+
+```{r}
+library(lisi)
+
+umap_raw <- as.matrix(read.csv(paste0(data_path, "Rawdata_lisi.csv"),row.names=1))
+umap_BBKNN <- as.matrix(read.csv(paste0(data_path, "BBKNN_lisi.csv"),row.names=1))
+umap_COMBAT <- as.matrix(read.csv(paste0(data_path, "ComBat_lisi.csv"),row.names=1))
+umap_harmony <- as.matrix(read.csv(paste0(data_path, "Harmony_lisi.csv"),row.names=1))
+
+umap_iMAP <- as.matrix(read.csv(paste0(data_path, "iMAP_lisi.csv"),row.names=1))
+umap_RISC <- as.matrix(read.csv(paste0(data_path, "RISC_lisi.csv"),row.names=1))
+
+#anno 沿用上述
+
+```
+
+```{r}
+lisi_raw <- compute_lisi(umap_raw, anno_raw, c('batch', 'celltype'))
+lisi_BBKNN <- compute_lisi(umap_BBKNN,anno_raw,c('batch','celltype'))
+lisi_COMBAT <- compute_lisi(umap_COMBAT,anno_raw,c('batch','celltype'))
+lisi_harmony <- compute_lisi(umap_harmony,anno_raw,c('batch','celltype'))
+lisi_iMAP <- compute_lisi(umap_iMAP,anno_iMAP,c('batch','celltype'))
+lisi_RISC <- compute_lisi(umap_RISC,anno_RISC,c('batch','celltype'))
+```
+
+##要么就用它们做可视化，要么去用python可视化  可恶啊啊啊啊我怎么还没有学会ggplot2
+```{r}
+lisi_res <- list(lisi_raw,lisi_BBKNN,lisi_COMBAT,lisi_harmony,lisi_iMAP,lisi_RISC)
+kBET_res <- list(resO,resB,resC,resH,resI,resR)
+names1 <- c('raw','BBKNN','ComBat','harmony','iMAP','RISC')
+
+```
+
+##出来吧for循环
+```{r}
+
+path1 = 'E:/2021-spring/batch/IntegratedCode_batchCorrection/Dataset/GSE94820_cleared/score/'
+for (i in 1:6){
+  write.csv(lisi_res[i],file = paste0(path1,names1[i],'_lisiScore.csv'),row.names = F)
+  write.csv(kBET_res[[i]]$stats,file = paste0(path1,names1[i],'_kBETScore.csv'),row.names = F)
+}
+
+```
+
+
