@@ -27,4 +27,4 @@
     My midterm project of computational biology course. I used histogram to simplify the aligning process.
 
 
-- 
+Thanks for reading!
